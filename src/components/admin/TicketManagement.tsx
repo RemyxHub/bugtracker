@@ -1,0 +1,466 @@
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { MoreHorizontal, RefreshCw, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
+interface Ticket {
+  id: string;
+  ticket_number: string;
+  title: string;
+  customer_name: string;
+  customer_email: string;
+  application_name: string;
+  created_at: string;
+  status: string;
+  severity: string;
+  assigned_to: string | null;
+}
+
+interface Staff {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
+const TicketManagement = () => {
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStaff, setSelectedStaff] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [noteText, setNoteText] = useState("");
+
+  // Fetch tickets from database
+  const fetchTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(
+          `
+          *,
+          assigned_to:users(name, email)
+        `,
+        )
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching tickets:", error);
+        return;
+      }
+
+      setTickets(data || []);
+    } catch (err) {
+      console.error("Unexpected error fetching tickets:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTickets();
+  }, []);
+
+  const staff: Staff[] = [
+    { id: "1", name: "John Smith", avatar: "JS" },
+    { id: "2", name: "Emma Wilson", avatar: "EW" },
+    { id: "3", name: "Michael Brown", avatar: "MB" },
+    { id: "4", name: "Sarah Davis", avatar: "SD" },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "resolved":
+      case "closed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "in_progress":
+      case "assigned":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "cancelled":
+        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+      case "open":
+      case "new":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300";
+    }
+  };
+
+  const handleAssignTicket = async () => {
+    if (!selectedTicket || !selectedStaff) return;
+
+    try {
+      const { error } = await supabase
+        .from("tickets")
+        .update({
+          assigned_to: selectedStaff,
+          status: "assigned",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", selectedTicket.id);
+
+      if (error) {
+        console.error("Error assigning ticket:", error);
+        return;
+      }
+
+      // Refresh tickets
+      fetchTickets();
+      setSelectedStaff("");
+    } catch (err) {
+      console.error("Unexpected error assigning ticket:", err);
+    }
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!selectedTicket || !selectedStatus) return;
+
+    try {
+      const updateData: any = {
+        status: selectedStatus,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (selectedStatus === "resolved" || selectedStatus === "closed") {
+        updateData.resolved_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from("tickets")
+        .update(updateData)
+        .eq("id", selectedTicket.id);
+
+      if (error) {
+        console.error("Error updating ticket status:", error);
+        return;
+      }
+
+      // Refresh tickets
+      fetchTickets();
+      setSelectedStatus("");
+    } catch (err) {
+      console.error("Unexpected error updating ticket status:", err);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!selectedTicket || !noteText.trim()) return;
+
+    try {
+      const { error } = await supabase.from("ticket_notes").insert({
+        ticket_id: selectedTicket.id,
+        user_id: "admin", // You might want to get this from auth context
+        note: noteText.trim(),
+      });
+
+      if (error) {
+        console.error("Error adding note:", error);
+        return;
+      }
+
+      // Update ticket's updated_at timestamp
+      await supabase
+        .from("tickets")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", selectedTicket.id);
+
+      // Refresh tickets
+      fetchTickets();
+      setNoteText("");
+    } catch (err) {
+      console.error("Unexpected error adding note:", err);
+    }
+  };
+
+  const filteredTickets = tickets.filter(
+    (ticket) =>
+      ticket.ticket_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ticket.application_name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  return (
+    <Card className="w-full bg-background">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Ticket Management</CardTitle>
+        <div className="flex items-center space-x-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search tickets..."
+              className="pl-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button variant="outline" size="icon" onClick={fetchTickets}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Loading tickets...</span>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Customer</TableHead>
+                <TableHead>Application</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Severity</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredTickets.map((ticket) => (
+                <TableRow key={ticket.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarFallback>
+                          {ticket.customer_name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-medium">{ticket.customer_name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {ticket.ticket_number}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                          {ticket.title}
+                        </p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>{ticket.application_name}</TableCell>
+                  <TableCell>
+                    {new Date(ticket.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      className={getStatusColor(ticket.status)}
+                      variant="outline"
+                    >
+                      {ticket.status.replace("_", " ").toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={
+                        ticket.severity === "critical"
+                          ? "bg-red-100 text-red-800"
+                          : ticket.severity === "high"
+                            ? "bg-orange-100 text-orange-800"
+                            : ticket.severity === "medium"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                      }
+                    >
+                      {ticket.severity.toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedTicket(ticket)}
+                          >
+                            Assign
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Assign Ticket</DialogTitle>
+                            <DialogDescription>
+                              Assign ticket {selectedTicket?.id} to a staff
+                              member.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Select
+                                value={selectedStaff}
+                                onValueChange={setSelectedStaff}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select staff member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {staff.map((member) => (
+                                    <SelectItem
+                                      key={member.id}
+                                      value={member.id}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="h-6 w-6">
+                                          <AvatarFallback className="text-xs">
+                                            {member.avatar}
+                                          </AvatarFallback>
+                                        </Avatar>
+                                        <span>{member.name}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              type="submit"
+                              onClick={handleAssignTicket}
+                              disabled={!selectedStaff}
+                            >
+                              Assign Ticket
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedTicket(ticket)}
+                          >
+                            Add Note
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add Note to Ticket</DialogTitle>
+                            <DialogDescription>
+                              Add a note to ticket {selectedTicket?.id}.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <Textarea
+                              placeholder="Enter your note here..."
+                              className="min-h-[100px]"
+                              value={noteText}
+                              onChange={(e) => setNoteText(e.target.value)}
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              type="submit"
+                              onClick={handleAddNote}
+                              disabled={!noteText.trim()}
+                            >
+                              Add Note
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedTicket(ticket)}
+                          >
+                            Update Status
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Update Ticket Status</DialogTitle>
+                            <DialogDescription>
+                              Update the status of ticket {selectedTicket?.id}.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <Select
+                              value={selectedStatus}
+                              onValueChange={setSelectedStatus}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="open">Open</SelectItem>
+                                <SelectItem value="in_progress">
+                                  In Progress
+                                </SelectItem>
+                                <SelectItem value="assigned">
+                                  Assigned
+                                </SelectItem>
+                                <SelectItem value="resolved">
+                                  Resolved
+                                </SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
+                                <SelectItem value="cancelled">
+                                  Cancelled
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              type="submit"
+                              onClick={handleUpdateStatus}
+                              disabled={!selectedStatus}
+                            >
+                              Update Status
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+
+                      <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+export default TicketManagement;
