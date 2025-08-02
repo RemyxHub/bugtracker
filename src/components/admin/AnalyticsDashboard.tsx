@@ -19,6 +19,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
   CalendarIcon,
   SearchIcon,
   ArrowUpIcon,
@@ -26,11 +32,22 @@ import {
   RefreshCwIcon,
   AlertCircle,
 } from "lucide-react";
+import { format, addDays } from "date-fns";
+import { DateRange } from "react-day-picker";
 import {
   fetchAnalyticsData,
   fetchChartData,
   fetchTickets,
+  subscribeToTicketChanges,
 } from "@/lib/supabase";
+
+// Supabase Environment Variables Required:
+// VITE_SUPABASE_URL=https://your-project-id.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-key-here
+// SUPABASE_PROJECT_ID=your-project-id
+// SUPABASE_URL=https://your-project-id.supabase.co
+// SUPABASE_ANON_KEY=your-anon-key-here
+// SUPABASE_SERVICE_KEY=your-service-role-key-here
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AnalyticsDashboardProps {
@@ -38,7 +55,10 @@ interface AnalyticsDashboardProps {
 }
 
 const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
-  const [dateRange, setDateRange] = useState("01.12.2024 - 31.12.2024");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(2024, 11, 1), // December 1, 2024
+    to: new Date(2024, 11, 31), // December 31, 2024
+  });
   const [selectedYear, setSelectedYear] = useState("2024");
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [chartData, setChartData] = useState<any>({ sales: [], activity: [] });
@@ -48,15 +68,27 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
 
   useEffect(() => {
     loadDashboardData();
-  }, [selectedYear]);
+  }, [selectedYear, dateRange]);
+
+  // Set up real-time subscription for ticket changes
+  useEffect(() => {
+    const subscription = subscribeToTicketChanges(() => {
+      loadDashboardData();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const loadDashboardData = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Fetch analytics data
-      const analytics = await fetchAnalyticsData();
+      // Fetch analytics data with date range
+      const analytics = await fetchAnalyticsData(dateRange);
+      console.log("Analytics data fetched:", analytics);
       if (analytics && analytics.length > 0) {
         const processedAnalytics = {
           orders: {
@@ -141,10 +173,10 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
         setError("No analytics data available");
       }
 
-      // Fetch chart data
+      // Fetch chart data with date range
       const [salesData, activityData] = await Promise.all([
-        fetchChartData("sales", parseInt(selectedYear)),
-        fetchChartData("activity", parseInt(selectedYear)),
+        fetchChartData("sales", parseInt(selectedYear), dateRange),
+        fetchChartData("activity", parseInt(selectedYear), dateRange),
       ]);
 
       setChartData({
@@ -152,25 +184,43 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
         activity: activityData || [],
       });
 
-      // Fetch tickets for customer orders
+      // Fetch callcentre tickets for customer orders display
       const tickets = await fetchTickets();
       if (tickets && tickets.length > 0) {
-        const processedTickets = tickets.slice(0, 4).map((ticket: any) => ({
-          id: ticket.id,
-          customer: ticket.customer_name,
-          address: ticket.application_name,
-          date: new Date(ticket.created_at).toLocaleDateString("en-GB"),
-          status:
-            ticket.status === "resolved"
-              ? "Delivered"
-              : ticket.status === "in_progress"
-                ? "Processed"
-                : ticket.status === "cancelled"
-                  ? "Cancelled"
-                  : "Processed",
-          amount: Math.floor(Math.random() * 1000) + 500, // Mock amount for display
-        }));
-        setCustomerOrders(processedTickets);
+        // Only show tickets that are assigned to callcentre staff or recently resolved
+        const callcentreRelevantTickets = tickets
+          .filter((ticket: any) => {
+            const isAssignedToCallcentre =
+              ticket.assigned_to &&
+              (ticket.assigned_to as any)?.role === "callcentre";
+            const isRecentlyResolved =
+              ticket.status === "resolved" &&
+              new Date(ticket.updated_at || ticket.created_at) >
+                new Date(Date.now() - 7 * 24 * 60 * 60 * 1000); // Last 7 days
+            return isAssignedToCallcentre || isRecentlyResolved;
+          })
+          .slice(0, 4)
+          .map((ticket: any) => ({
+            id: ticket.id,
+            customer: ticket.customer_name,
+            address: ticket.application_name,
+            date: new Date(ticket.created_at).toLocaleDateString("en-GB"),
+            status:
+              ticket.status === "resolved"
+                ? "Resolved"
+                : ticket.status === "in_progress"
+                  ? "In Progress"
+                  : ticket.status === "assigned"
+                    ? "Assigned"
+                    : ticket.status === "cancelled"
+                      ? "Cancelled"
+                      : "Open",
+            amount:
+              ticket.status === "resolved"
+                ? Math.floor(Math.random() * 200) + 100
+                : 0, // Resolution value
+          }));
+        setCustomerOrders(callcentreRelevantTickets);
       }
     } catch (err) {
       console.error("Error loading dashboard data:", err);
@@ -255,10 +305,35 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Analytics</h1>
         <div className="flex items-center space-x-4">
-          <Button variant="outline" className="flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4" />
-            {dateRange}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="flex items-center gap-2">
+                <CalendarIcon className="h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "dd.MM.yyyy")} -{" "}
+                      {format(dateRange.to, "dd.MM.yyyy")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "dd.MM.yyyy")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={dateRange?.from}
+                selected={dateRange}
+                onSelect={setDateRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
           <Button
             variant="outline"
             size="sm"
@@ -290,7 +365,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
           className={`${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Tickets</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
@@ -340,7 +415,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
           className={`${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Approved</CardTitle>
+            <CardTitle className="text-sm font-medium">Resolved</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
@@ -388,7 +463,9 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
           className={`${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Users</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Call Centre Staff
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
@@ -414,7 +491,9 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
           className={`${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Subscriptions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Assigned Tickets
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
@@ -442,7 +521,9 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
           className={`${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Month total</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              This Month's Tickets
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
@@ -474,7 +555,9 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
           className={`${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
         >
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Resolution Value
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex justify-between items-center">
@@ -545,7 +628,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
         >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Sales dynamics
+              Ticket Resolution Trends
             </CardTitle>
             <div className="flex items-center">
               <span className="text-sm font-medium mr-2">{selectedYear}</span>
@@ -572,9 +655,9 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
                       className="flex flex-col items-center"
                     >
                       <div
-                        className={`w-6 ${theme === "dark" ? "bg-blue-500" : "bg-blue-500"}`}
+                        className={`w-6 ${theme === "dark" ? "bg-green-500" : "bg-green-500"}`}
                         style={{
-                          height: `${(data.value / Math.max(...chartData.sales.map((d: any) => d.value))) * 150 + 20}px`,
+                          height: `${Math.max((data.value / Math.max(...chartData.sales.map((d: any) => d.value))) * 150 + 20, 20)}px`,
                         }}
                       ></div>
                       <div className="text-xs mt-2">{data.month}</div>
@@ -584,7 +667,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-muted-foreground">
-                    No sales data available
+                    No resolution data available
                   </p>
                 </div>
               )}
@@ -598,7 +681,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
         >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Overall User Activity
+              Call Centre Ticket Activity
             </CardTitle>
             <div className="flex items-center">
               <span className="text-sm font-medium mr-2">{selectedYear}</span>
@@ -647,7 +730,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
               ) : (
                 <div className="flex items-center justify-center h-full">
                   <p className="text-muted-foreground">
-                    No activity data available
+                    No call centre activity data available
                   </p>
                 </div>
               )}
@@ -704,7 +787,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
                 <span className="text-xs font-bold">+15%</span>
               </div>
             </div>
-            <h3 className="text-sm font-medium mb-2">Paid Invoices</h3>
+            <h3 className="text-sm font-medium mb-2">Total Resolution Value</h3>
             <div className="text-2xl font-bold mb-1">
               $
               {analyticsData.paidInvoices.value.toLocaleString("en-US", {
@@ -753,7 +836,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
                 <span className="text-xs font-bold">+8%</span>
               </div>
             </div>
-            <h3 className="text-sm font-medium mb-2">Funds received</h3>
+            <h3 className="text-sm font-medium mb-2">Total Ticket Value</h3>
             <div className="text-2xl font-bold mb-1">
               $
               {analyticsData.fundsReceived.value.toLocaleString("en-US", {
@@ -772,7 +855,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
         >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
-              Customer order
+              Recent Call Centre Activity
             </CardTitle>
             <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
               <RefreshCwIcon className="h-4 w-4" />
@@ -783,10 +866,10 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[100px]">Customer</TableHead>
-                  <TableHead>Address</TableHead>
+                  <TableHead>Application</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Value</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -802,16 +885,18 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
                         <Badge
                           variant="outline"
                           className={`
-                            ${order.status === "Delivered" ? "bg-green-100 text-green-800 border-green-200" : ""}
-                            ${order.status === "Processed" ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
+                            ${order.status === "Resolved" ? "bg-green-100 text-green-800 border-green-200" : ""}
+                            ${order.status === "In Progress" ? "bg-blue-100 text-blue-800 border-blue-200" : ""}
+                            ${order.status === "Assigned" ? "bg-yellow-100 text-yellow-800 border-yellow-200" : ""}
                             ${order.status === "Cancelled" ? "bg-red-100 text-red-800 border-red-200" : ""}
+                            ${order.status === "Open" ? "bg-gray-100 text-gray-800 border-gray-200" : ""}
                           `}
                         >
                           {order.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        ${order.amount}
+                        {order.amount > 0 ? `${order.amount}` : "-"}
                       </TableCell>
                     </TableRow>
                   ))
@@ -819,7 +904,7 @@ const AnalyticsDashboard = ({ theme = "light" }: AnalyticsDashboardProps) => {
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-8">
                       <p className="text-muted-foreground">
-                        No customer orders available
+                        No call centre activity available
                       </p>
                     </TableCell>
                   </TableRow>

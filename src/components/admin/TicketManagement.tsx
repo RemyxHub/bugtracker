@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+
+// Supabase Environment Variables Required:
+// VITE_SUPABASE_URL=https://your-project-id.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-key-here
+// SUPABASE_PROJECT_ID=your-project-id
+// SUPABASE_URL=https://your-project-id.supabase.co
+// SUPABASE_ANON_KEY=your-anon-key-here
+// SUPABASE_SERVICE_KEY=your-service-role-key-here
 import {
   Table,
   TableBody,
@@ -29,17 +37,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { MoreHorizontal, RefreshCw, Search } from "lucide-react";
+import {
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  FileText,
+  User,
+  Mail,
+  Phone,
+  Calendar,
+  Clock,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Ticket {
   id: string;
   ticket_number: string;
   title: string;
+  description: string;
+  steps_to_reproduce: string;
   customer_name: string;
   customer_email: string;
+  customer_phone: string | null;
   application_name: string;
   created_at: string;
+  updated_at: string | null;
+  resolved_at: string | null;
   status: string;
   severity: string;
   assigned_to: string | null;
@@ -59,6 +85,8 @@ const TicketManagement = () => {
   const [selectedStaff, setSelectedStaff] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [noteText, setNoteText] = useState("");
+  const [ticketNotes, setTicketNotes] = useState<any[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
 
   // Fetch tickets from database
   const fetchTickets = async () => {
@@ -92,9 +120,9 @@ const TicketManagement = () => {
 
   const staff: Staff[] = [
     { id: "1", name: "John Smith", avatar: "JS" },
-    { id: "2", name: "Emma Wilson", avatar: "EW" },
-    { id: "3", name: "Michael Brown", avatar: "MB" },
-    { id: "4", name: "Sarah Davis", avatar: "SD" },
+    { id: "2", name: "Sarah Johnson", avatar: "SJ" },
+    { id: "3", name: "Remy Admin", avatar: "RA" },
+    { id: "4", name: "Admin User", avatar: "AU" },
   ];
 
   const getStatusColor = (status: string) => {
@@ -119,25 +147,44 @@ const TicketManagement = () => {
     if (!selectedTicket || !selectedStaff) return;
 
     try {
-      const { error } = await supabase
-        .from("tickets")
-        .update({
-          assigned_to: selectedStaff,
-          status: "assigned",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", selectedTicket.id);
+      // First, get the user UUID from the users table
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("name", selectedStaff)
+        .single();
 
-      if (error) {
-        console.error("Error assigning ticket:", error);
+      if (userError || !userData) {
+        console.error("Error finding user:", userError);
+        alert("Failed to find the selected staff member. Please try again.");
         return;
       }
 
+      const { data, error } = await supabase
+        .from("tickets")
+        .update({
+          assigned_to: userData.id,
+          status: "assigned",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", selectedTicket.id)
+        .select();
+
+      if (error) {
+        console.error("Error assigning ticket:", error);
+        alert("Failed to assign ticket. Please try again.");
+        return;
+      }
+
+      console.log("Ticket assigned successfully:", data);
+      alert("Ticket assigned successfully!");
+
       // Refresh tickets
-      fetchTickets();
+      await fetchTickets();
       setSelectedStaff("");
     } catch (err) {
       console.error("Unexpected error assigning ticket:", err);
+      alert("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -154,50 +201,123 @@ const TicketManagement = () => {
         updateData.resolved_at = new Date().toISOString();
       }
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("tickets")
         .update(updateData)
-        .eq("id", selectedTicket.id);
+        .eq("id", selectedTicket.id)
+        .select();
 
       if (error) {
         console.error("Error updating ticket status:", error);
+        alert("Failed to update ticket status. Please try again.");
         return;
       }
 
+      console.log("Ticket status updated successfully:", data);
+      alert(
+        `Ticket status updated to ${selectedStatus.replace("_", " ")} successfully!`,
+      );
+
       // Refresh tickets
-      fetchTickets();
+      await fetchTickets();
       setSelectedStatus("");
     } catch (err) {
       console.error("Unexpected error updating ticket status:", err);
+      alert("An unexpected error occurred. Please try again.");
     }
+  };
+
+  // Fetch ticket notes
+  const fetchTicketNotes = async (ticketId: string) => {
+    setLoadingNotes(true);
+    try {
+      const { data, error } = await supabase
+        .from("ticket_notes")
+        .select(
+          `
+          *,
+          users(name, email)
+        `,
+        )
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching ticket notes:", error);
+        return;
+      }
+
+      setTicketNotes(data || []);
+    } catch (err) {
+      console.error("Unexpected error fetching ticket notes:", err);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  const handleViewTicket = (ticket: Ticket) => {
+    setSelectedTicket(ticket);
+    fetchTicketNotes(ticket.id);
   };
 
   const handleAddNote = async () => {
     if (!selectedTicket || !noteText.trim()) return;
 
     try {
-      const { error } = await supabase.from("ticket_notes").insert({
-        ticket_id: selectedTicket.id,
-        user_id: "admin", // You might want to get this from auth context
-        note: noteText.trim(),
-      });
+      // Get a valid admin user ID
+      const { data: adminUser, error: adminError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("role", "admin")
+        .eq("status", "active")
+        .limit(1)
+        .single();
 
-      if (error) {
-        console.error("Error adding note:", error);
+      if (adminError || !adminUser) {
+        console.error("Error finding admin user:", adminError);
+        alert("Failed to find admin user. Please try again.");
         return;
       }
 
+      const { data: noteData, error: noteError } = await supabase
+        .from("ticket_notes")
+        .insert({
+          ticket_id: selectedTicket.id,
+          user_id: adminUser.id,
+          note: noteText.trim(),
+          created_at: new Date().toISOString(),
+        })
+        .select();
+
+      if (noteError) {
+        console.error("Error adding note:", noteError);
+        alert("Failed to add note. Please try again.");
+        return;
+      }
+
+      console.log("Note added successfully:", noteData);
+
       // Update ticket's updated_at timestamp
-      await supabase
+      const { data: ticketData, error: ticketError } = await supabase
         .from("tickets")
         .update({ updated_at: new Date().toISOString() })
-        .eq("id", selectedTicket.id);
+        .eq("id", selectedTicket.id)
+        .select();
+
+      if (ticketError) {
+        console.error("Error updating ticket timestamp:", ticketError);
+      } else {
+        console.log("Ticket timestamp updated:", ticketData);
+      }
+
+      alert("Note added successfully!");
 
       // Refresh tickets
-      fetchTickets();
+      await fetchTickets();
       setNoteText("");
     } catch (err) {
       console.error("Unexpected error adding note:", err);
+      alert("An unexpected error occurred. Please try again.");
     }
   };
 
@@ -302,6 +422,195 @@ const TicketManagement = () => {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleViewTicket(ticket)}
+                          >
+                            <FileText className="h-4 w-4 mr-1" />
+                            View Details
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle className="flex items-center space-x-2">
+                              <span>Ticket Details</span>
+                              <Badge
+                                className={getStatusColor(
+                                  selectedTicket?.status || "",
+                                )}
+                                variant="outline"
+                              >
+                                {selectedTicket?.status
+                                  .replace("_", " ")
+                                  .toUpperCase()}
+                              </Badge>
+                            </DialogTitle>
+                            <DialogDescription>
+                              {selectedTicket?.ticket_number} -{" "}
+                              {selectedTicket?.title}
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          {selectedTicket && (
+                            <div className="space-y-6">
+                              {/* Customer Information */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label className="font-semibold">
+                                    Customer Information
+                                  </Label>
+                                  <div className="space-y-1 text-sm">
+                                    <div className="flex items-center space-x-2">
+                                      <User className="h-4 w-4" />
+                                      <span>
+                                        {selectedTicket.customer_name}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Mail className="h-4 w-4" />
+                                      <span>
+                                        {selectedTicket.customer_email}
+                                      </span>
+                                    </div>
+                                    {selectedTicket.customer_phone && (
+                                      <div className="flex items-center space-x-2">
+                                        <Phone className="h-4 w-4" />
+                                        <span>
+                                          {selectedTicket.customer_phone}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label className="font-semibold">
+                                    Ticket Information
+                                  </Label>
+                                  <div className="space-y-1 text-sm">
+                                    <div>
+                                      Application:{" "}
+                                      {selectedTicket.application_name}
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <span>Severity:</span>
+                                      <Badge
+                                        variant="outline"
+                                        className={
+                                          selectedTicket.severity === "critical"
+                                            ? "bg-red-100 text-red-800"
+                                            : selectedTicket.severity === "high"
+                                              ? "bg-orange-100 text-orange-800"
+                                              : selectedTicket.severity ===
+                                                  "medium"
+                                                ? "bg-yellow-100 text-yellow-800"
+                                                : "bg-green-100 text-green-800"
+                                        }
+                                      >
+                                        {selectedTicket.severity.toUpperCase()}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Calendar className="h-4 w-4" />
+                                      <span>
+                                        Created:{" "}
+                                        {new Date(
+                                          selectedTicket.created_at,
+                                        ).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    {selectedTicket.updated_at && (
+                                      <div className="flex items-center space-x-2">
+                                        <Clock className="h-4 w-4" />
+                                        <span>
+                                          Updated:{" "}
+                                          {new Date(
+                                            selectedTicket.updated_at,
+                                          ).toLocaleString()}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              {/* Description and Steps */}
+                              <div className="space-y-4">
+                                <div>
+                                  <Label className="font-semibold">
+                                    Description
+                                  </Label>
+                                  <p className="mt-2 text-sm bg-muted p-3 rounded-md">
+                                    {selectedTicket.description}
+                                  </p>
+                                </div>
+
+                                <div>
+                                  <Label className="font-semibold">
+                                    Steps to Reproduce
+                                  </Label>
+                                  <p className="mt-2 text-sm bg-muted p-3 rounded-md whitespace-pre-wrap">
+                                    {selectedTicket.steps_to_reproduce}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              {/* Notes Section */}
+                              <div className="space-y-4">
+                                <Label className="font-semibold">
+                                  Notes & Comments
+                                </Label>
+                                <ScrollArea className="h-48 w-full border rounded-md p-4">
+                                  {loadingNotes ? (
+                                    <div className="flex items-center justify-center py-4">
+                                      <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                                      <span className="text-sm">
+                                        Loading notes...
+                                      </span>
+                                    </div>
+                                  ) : ticketNotes.length > 0 ? (
+                                    <div className="space-y-3">
+                                      {ticketNotes.map((note) => (
+                                        <div
+                                          key={note.id}
+                                          className="border-l-2 border-muted pl-3 py-2"
+                                        >
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-sm font-medium">
+                                              {note.users?.name ||
+                                                "Unknown User"}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                              {new Date(
+                                                note.created_at,
+                                              ).toLocaleString()}
+                                            </span>
+                                          </div>
+                                          <p className="text-sm text-muted-foreground">
+                                            {note.note}
+                                          </p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                      No notes available for this ticket.
+                                    </p>
+                                  )}
+                                </ScrollArea>
+                              </div>
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setSelectedTicket(ticket)}
                           >
                             Assign
@@ -328,7 +637,7 @@ const TicketManagement = () => {
                                   {staff.map((member) => (
                                     <SelectItem
                                       key={member.id}
-                                      value={member.id}
+                                      value={member.name}
                                     >
                                       <div className="flex items-center gap-2">
                                         <Avatar className="h-6 w-6">

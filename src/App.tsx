@@ -7,6 +7,7 @@ import CallCentreLoginPage from "./components/auth/CallCentreLoginPage";
 import ForgotPasswordPage from "./components/auth/ForgotPasswordPage";
 import AdminDashboard from "./pages/admin/dashboard";
 import CallCentreDashboard from "./pages/callcentre/dashboard";
+import ViewTickets from "./components/admin/ViewTickets";
 import routes from "tempo-routes";
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
             element={<ForgotPasswordPage userType="callcentre" />}
           />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/view-tickets" element={<ViewTickets />} />
           <Route
             path="/callcentre/dashboard"
             element={<CallCentreDashboard />}

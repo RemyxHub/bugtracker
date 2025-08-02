@@ -125,27 +125,6 @@ const Dashboard = () => {
               <span>Sign Out</span>
             </div>
           </nav>
-
-          <div className="mt-auto pt-10">
-            <div
-              className={`p-4 rounded-lg ${theme === "dark" ? "bg-gray-700" : "bg-gray-100"} mt-20`}
-            >
-              <div className="flex items-center">
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80"
-                  alt="Support agent"
-                  className="w-16 h-auto rounded-md mr-3"
-                />
-                <div>
-                  <p className="text-sm">Need help</p>
-                  <p className="text-xs text-gray-500">Feel free to contact</p>
-                </div>
-              </div>
-              <Button className="w-full mt-3 text-xs" size="sm">
-                Get support
-              </Button>
-            </div>
-          </div>
         </div>
 
         {/* Main Content */}

@@ -3,6 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/lib/supabase";
+
+// Supabase Environment Variables Required:
+// VITE_SUPABASE_URL=https://your-project-id.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-key-here
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

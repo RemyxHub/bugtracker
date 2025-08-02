@@ -24,6 +24,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Headphones, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { authenticateUser } from "@/lib/supabase";
 
+// Supabase Environment Variables Required:
+// VITE_SUPABASE_URL=https://your-project-id.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-key-here
+
 const loginSchema = z.object({
   employeeId: z
     .string()

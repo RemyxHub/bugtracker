@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -46,6 +46,13 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { UserPlus, Edit, Trash2, Shield, Headphones } from "lucide-react";
+import {
+  addUser,
+  updateUser,
+  deleteUser,
+  toggleUserStatus as toggleUserStatusDB,
+  fetchUsers,
+} from "@/lib/supabase";
 
 interface User {
   id: string;
@@ -58,7 +65,7 @@ interface User {
   lastLogin: string;
 }
 
-const userSchema = z.object({
+const addUserSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   employeeId: z
@@ -70,51 +77,69 @@ const userSchema = z.object({
     .min(6, { message: "Password must be at least 6 characters" }),
 });
 
-type UserFormValues = z.infer<typeof userSchema>;
+const editUserSchema = z.object({
+  name: z.string().min(2, { message: "Name must be at least 2 characters" }),
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  employeeId: z
+    .string()
+    .min(3, { message: "Employee ID must be at least 3 characters" }),
+  role: z.enum(["admin", "callcentre"], { message: "Please select a role" }),
+  password: z
+    .string()
+    .optional()
+    .refine((val) => !val || val.length >= 6, {
+      message: "Password must be at least 6 characters if provided",
+    }),
+});
+
+type UserFormValues = z.infer<typeof addUserSchema>;
 
 interface UserManagementProps {
   theme: "light" | "dark";
 }
 
 const UserManagement = ({ theme = "light" }: UserManagementProps) => {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: "1",
-      name: "Admin User",
-      email: "admin@company.com",
-      employeeId: "ADM001",
-      role: "admin",
-      status: "active",
-      createdAt: "2024-07-01",
-      lastLogin: "2024-07-31",
-    },
-    {
-      id: "2",
-      name: "John Smith",
-      email: "john.smith@company.com",
-      employeeId: "CC001",
-      role: "callcentre",
-      status: "active",
-      createdAt: "2024-07-15",
-      lastLogin: "2024-07-31",
-    },
-    {
-      id: "3",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@company.com",
-      employeeId: "CC002",
-      role: "callcentre",
-      status: "active",
-      createdAt: "2024-07-20",
-      lastLogin: "2024-07-30",
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
+  // Load users from database
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchUsers();
+      if (data) {
+        const formattedUsers = data.map((user: any) => ({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          employeeId: user.employee_id,
+          role: user.role,
+          status: user.status,
+          createdAt: user.created_at
+            ? new Date(user.created_at).toISOString().split("T")[0]
+            : "",
+          lastLogin: user.last_login
+            ? new Date(user.last_login).toISOString().split("T")[0]
+            : "Never",
+        }));
+        setUsers(formattedUsers);
+      }
+    } catch (error) {
+      console.error("Error loading users:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const form = useForm<UserFormValues>({
-    resolver: zodResolver(userSchema),
+    resolver: zodResolver(editingUser ? editUserSchema : addUserSchema),
     defaultValues: {
       name: "",
       email: "",
@@ -124,42 +149,62 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
     },
   });
 
-  const onSubmit = (data: UserFormValues) => {
-    if (editingUser) {
-      // Update existing user
-      setUsers(
-        users.map((user) =>
-          user.id === editingUser.id
-            ? {
-                ...user,
-                ...data,
-                id: editingUser.id,
-                status: editingUser.status,
-                createdAt: editingUser.createdAt,
-                lastLogin: editingUser.lastLogin,
-              }
-            : user,
-        ),
-      );
-      setEditingUser(null);
-    } else {
-      // Add new user
-      const newUser: User = {
-        id: Date.now().toString(),
-        ...data,
-        status: "active",
-        createdAt: new Date().toISOString().split("T")[0],
-        lastLogin: "Never",
-      };
-      setUsers([...users, newUser]);
-    }
+  const onSubmit = async (data: UserFormValues) => {
+    try {
+      if (editingUser) {
+        // Update existing user - only include password if it's provided
+        const updateData: any = {
+          name: data.name,
+          email: data.email,
+          employeeId: data.employeeId,
+          role: data.role,
+        };
 
-    form.reset();
-    setIsAddDialogOpen(false);
+        // Only include password if it's not empty
+        if (data.password && data.password.trim() !== "") {
+          updateData.password = data.password;
+        }
+
+        const result = await updateUser(editingUser.id, updateData);
+
+        if (result.success) {
+          await loadUsers(); // Reload users from database
+          setEditingUser(null);
+        } else {
+          console.error("Failed to update user:", result.error);
+          alert("Failed to update user. Please try again.");
+          return;
+        }
+      } else {
+        // Add new user
+        const result = await addUser({
+          name: data.name,
+          email: data.email,
+          employeeId: data.employeeId,
+          role: data.role,
+          password: data.password,
+        });
+
+        if (result.success) {
+          await loadUsers(); // Reload users from database
+        } else {
+          console.error("Failed to add user:", result.error);
+          alert("Failed to add user. Please try again.");
+          return;
+        }
+      }
+
+      form.reset();
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error("Error submitting user form:", error);
+      alert("An error occurred. Please try again.");
+    }
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
+    // Reset form with new schema resolver for editing
     form.reset({
       name: user.name,
       email: user.email,
@@ -170,21 +215,45 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
     setIsAddDialogOpen(true);
   };
 
-  const handleDelete = (userId: string) => {
-    setUsers(users.filter((user) => user.id !== userId));
+  // Update form resolver when editing state changes
+  React.useEffect(() => {
+    const currentResolver = editingUser ? editUserSchema : addUserSchema;
+    form.reset(form.getValues(), { resolver: zodResolver(currentResolver) });
+  }, [editingUser, form]);
+
+  const handleDelete = async (userId: string) => {
+    if (confirm("Are you sure you want to delete this user?")) {
+      try {
+        const result = await deleteUser(userId);
+        if (result.success) {
+          await loadUsers(); // Reload users from database
+        } else {
+          console.error("Failed to delete user:", result.error);
+          alert("Failed to delete user. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        alert("An error occurred. Please try again.");
+      }
+    }
   };
 
-  const toggleUserStatus = (userId: string) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId
-          ? {
-              ...user,
-              status: user.status === "active" ? "inactive" : "active",
-            }
-          : user,
-      ),
-    );
+  const toggleUserStatus = async (userId: string) => {
+    try {
+      const user = users.find((u) => u.id === userId);
+      if (!user) return;
+
+      const result = await toggleUserStatusDB(userId, user.status);
+      if (result.success) {
+        await loadUsers(); // Reload users from database
+      } else {
+        console.error("Failed to toggle user status:", result.error);
+        alert("Failed to update user status. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+      alert("An error occurred. Please try again.");
+    }
   };
 
   const getRoleIcon = (role: string) => {
@@ -406,98 +475,104 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Employee ID</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Login</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="flex items-center space-x-3">
-                      <Avatar>
-                        <AvatarImage
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                        />
-                        <AvatarFallback>
-                          {user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {user.employeeId}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={getRoleColor(user.role)}
-                      variant="outline"
-                    >
-                      <div className="flex items-center space-x-1">
-                        {getRoleIcon(user.role)}
-                        <span>
-                          {user.role === "admin"
-                            ? "Administrator"
-                            : "Call Centre"}
-                        </span>
-                      </div>
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className={getStatusColor(user.status)}
-                      variant="outline"
-                    >
-                      {user.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{user.lastLogin}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(user)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleUserStatus(user.id)}
-                      >
-                        {user.status === "active" ? "Deactivate" : "Activate"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(user.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-muted-foreground">Loading users...</div>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Last Login</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <Avatar>
+                          <AvatarImage
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                          />
+                          <AvatarFallback>
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {user.employeeId}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={getRoleColor(user.role)}
+                        variant="outline"
+                      >
+                        <div className="flex items-center space-x-1">
+                          {getRoleIcon(user.role)}
+                          <span>
+                            {user.role === "admin"
+                              ? "Administrator"
+                              : "Call Centre"}
+                          </span>
+                        </div>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={getStatusColor(user.status)}
+                        variant="outline"
+                      >
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{user.lastLogin}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleUserStatus(user.id)}
+                        >
+                          {user.status === "active" ? "Deactivate" : "Activate"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(user.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

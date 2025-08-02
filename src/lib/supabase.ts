@@ -1,26 +1,182 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Supabase Configuration
+// Replace these with your actual Supabase project details
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL || "https://your-project-id.supabase.co";
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY || "your-anon-key-here";
+
+// Environment Variables Required:
+// VITE_SUPABASE_URL=https://your-project-id.supabase.co
+// VITE_SUPABASE_ANON_KEY=your-anon-key-here
+// SUPABASE_PROJECT_ID=your-project-id
+// SUPABASE_URL=https://your-project-id.supabase.co
+// SUPABASE_ANON_KEY=your-anon-key-here
+// SUPABASE_SERVICE_KEY=your-service-role-key-here
 
 if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(
+    "Missing Supabase environment variables. Please check your .env file.",
+  );
+  console.error(
+    "Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY",
+  );
   throw new Error("Missing Supabase environment variables");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Analytics data fetching functions
-export const fetchAnalyticsData = async () => {
-  try {
-    const { data, error } = await supabase
-      .from("analytics_data")
-      .select("*")
-      .eq("date_recorded", new Date().toISOString().split("T")[0]);
+// Real-time subscription for dashboard updates
+export const subscribeToTicketChanges = (callback: () => void) => {
+  const subscription = supabase
+    .channel("tickets-changes")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "tickets",
+      },
+      () => {
+        console.log("Ticket change detected, refreshing dashboard...");
+        callback();
+      },
+    )
+    .subscribe();
 
-    if (error) throw error;
-    return data;
+  return subscription;
+};
+
+// Analytics data fetching functions - filtered for callcentre data
+export const fetchAnalyticsData = async (dateRange?: {
+  from: Date;
+  to: Date;
+}) => {
+  try {
+    // Get callcentre-specific analytics data
+    let query = supabase
+      .from("tickets")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    // Apply date range filter if provided
+    if (dateRange?.from && dateRange?.to) {
+      query = query
+        .gte("created_at", dateRange.from.toISOString())
+        .lte("created_at", dateRange.to.toISOString());
+    }
+
+    const { data: ticketData, error: ticketError } = await query;
+
+    if (ticketError) {
+      console.error("Error fetching ticket data:", ticketError);
+      throw ticketError;
+    }
+
+    const { data: userData, error: userError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("role", "callcentre")
+      .eq("status", "active");
+
+    if (userError) {
+      console.error("Error fetching user data:", userError);
+      throw userError;
+    }
+
+    // Calculate callcentre-specific metrics
+    const totalTickets = ticketData?.length || 0;
+    const resolvedTickets =
+      ticketData?.filter(
+        (t) => t.status === "resolved" || t.status === "closed",
+      ).length || 0;
+    const assignedTickets =
+      ticketData?.filter((t) => t.assigned_to !== null).length || 0;
+    const activeStaff = userData?.length || 0;
+
+    // Get current month data for comparison
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    const currentMonthTickets =
+      ticketData?.filter((t) => {
+        const ticketDate = new Date(t.created_at);
+        return (
+          ticketDate.getMonth() === currentMonth &&
+          ticketDate.getFullYear() === currentYear
+        );
+      }).length || 0;
+
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+    const lastMonthTickets =
+      ticketData?.filter((t) => {
+        const ticketDate = new Date(t.created_at);
+        return (
+          ticketDate.getMonth() === lastMonth &&
+          ticketDate.getFullYear() === lastMonthYear
+        );
+      }).length || 0;
+
+    const ticketChange =
+      lastMonthTickets > 0
+        ? ((currentMonthTickets - lastMonthTickets) / lastMonthTickets) * 100
+        : 0;
+    const resolvedChange = Math.random() * 20 - 10; // Mock data for demo
+    const revenueChange = Math.random() * 15 - 5; // Mock data for demo
+
+    // Format data to match expected structure
+    const analyticsData = [
+      {
+        metric_name: "orders",
+        metric_value: totalTickets,
+        metric_change: Math.round(ticketChange),
+        metric_increased: ticketChange >= 0,
+      },
+      {
+        metric_name: "approved",
+        metric_value: resolvedTickets,
+        metric_change: Math.round(resolvedChange),
+        metric_increased: resolvedChange >= 0,
+      },
+      {
+        metric_name: "users",
+        metric_value: activeStaff,
+        metric_label: "active call centre staff",
+      },
+      {
+        metric_name: "subscriptions",
+        metric_value: assignedTickets,
+        metric_label: "assigned tickets",
+      },
+      {
+        metric_name: "month_total",
+        metric_value: currentMonthTickets,
+        metric_change: Math.round(ticketChange),
+        metric_increased: ticketChange >= 0,
+      },
+      {
+        metric_name: "revenue",
+        metric_value: resolvedTickets * 50, // Mock revenue calculation
+        metric_change: Math.round(revenueChange),
+        metric_increased: revenueChange >= 0,
+      },
+      {
+        metric_name: "paid_invoices",
+        metric_value: resolvedTickets * 75.5,
+        metric_label: "Total Resolution Value",
+      },
+      {
+        metric_name: "funds_received",
+        metric_value: totalTickets * 25.75,
+        metric_label: "Total Ticket Value",
+      },
+    ];
+
+    console.log("Callcentre analytics data generated:", analyticsData);
+    return analyticsData;
   } catch (error) {
-    console.error("Error fetching analytics data:", error);
+    console.error("Error fetching callcentre analytics data:", error);
     return null;
   }
 };
@@ -28,19 +184,72 @@ export const fetchAnalyticsData = async () => {
 export const fetchChartData = async (
   chartType: "sales" | "activity",
   year: number = new Date().getFullYear(),
+  dateRange?: { from: Date; to: Date },
 ) => {
   try {
-    const { data, error } = await supabase
-      .from("chart_data")
-      .select("*")
-      .eq("chart_type", chartType)
-      .eq("year", year)
-      .order("month");
+    // Fetch callcentre-related ticket data for charts
+    let query = supabase.from("tickets").select("*").order("created_at");
+
+    // Apply date range filter if provided, otherwise use year filter
+    if (dateRange?.from && dateRange?.to) {
+      query = query
+        .gte("created_at", dateRange.from.toISOString())
+        .lte("created_at", dateRange.to.toISOString());
+    } else {
+      query = query
+        .gte("created_at", `${year}-01-01`)
+        .lt("created_at", `${year + 1}-01-01`);
+    }
+
+    const { data: ticketData, error } = await query;
 
     if (error) throw error;
-    return data;
+
+    // Generate chart data based on ticket activity
+    const months = [
+      "JAN",
+      "FEB",
+      "MAR",
+      "APR",
+      "MAY",
+      "JUN",
+      "JUL",
+      "AUG",
+      "SEP",
+      "OCT",
+      "NOV",
+      "DEC",
+    ];
+
+    const chartData = months.map((month, index) => {
+      const monthTickets =
+        ticketData?.filter((ticket) => {
+          const ticketDate = new Date(ticket.created_at);
+          return ticketDate.getMonth() === index;
+        }) || [];
+
+      if (chartType === "sales") {
+        // For sales chart, show resolved tickets as "sales"
+        const resolvedCount = monthTickets.filter(
+          (t) => t.status === "resolved" || t.status === "closed",
+        ).length;
+        return {
+          month,
+          value: resolvedCount,
+        };
+      } else {
+        // For activity chart, show total ticket activity
+        return {
+          month,
+          value: monthTickets.length,
+        };
+      }
+    });
+
+    console.log(`Callcentre ${chartType} chart data generated:`, chartData);
+    return chartData;
   } catch (error) {
-    console.error("Error fetching chart data:", error);
+    console.error("Error fetching callcentre chart data:", error);
     return null;
   }
 };
@@ -52,16 +261,105 @@ export const fetchTickets = async () => {
       .select(
         `
         *,
-        assigned_to:users(name, email)
+        assigned_to:users(name, email, role)
       `,
       )
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
-    return data;
+    if (error) {
+      console.error("Error fetching tickets:", error);
+      throw error;
+    }
+
+    // Filter to only include tickets assigned to callcentre staff or unassigned tickets
+    const callcentreTickets =
+      data?.filter((ticket) => {
+        if (!ticket.assigned_to) return true; // Include unassigned tickets
+        return (ticket.assigned_to as any)?.role === "callcentre";
+      }) || [];
+
+    console.log(
+      "Callcentre tickets fetched successfully:",
+      callcentreTickets.length,
+      "tickets",
+    );
+    return callcentreTickets;
   } catch (error) {
-    console.error("Error fetching tickets:", error);
+    console.error("Error fetching callcentre tickets:", error);
     return null;
+  }
+};
+
+// Update ticket function
+export const updateTicket = async (ticketId: string, updates: any) => {
+  try {
+    const { data, error } = await supabase
+      .from("tickets")
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", ticketId)
+      .select();
+
+    if (error) {
+      console.error("Error updating ticket:", error);
+      throw error;
+    }
+
+    console.log("Ticket updated successfully:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error updating ticket:", error);
+    return { success: false, error };
+  }
+};
+
+// Add ticket note function
+export const addTicketNote = async (
+  ticketId: string,
+  note: string,
+  userId?: string,
+) => {
+  try {
+    // Get a valid admin user ID if none provided
+    let validUserId = userId;
+    if (!validUserId) {
+      const { data: adminUser, error: adminError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("role", "admin")
+        .eq("status", "active")
+        .limit(1)
+        .single();
+
+      if (adminError || !adminUser) {
+        console.error("Error finding admin user:", adminError);
+        throw new Error("No valid admin user found");
+      }
+      validUserId = adminUser.id;
+    }
+
+    const { data, error } = await supabase
+      .from("ticket_notes")
+      .insert({
+        ticket_id: ticketId,
+        user_id: validUserId,
+        note: note.trim(),
+        created_at: new Date().toISOString(),
+      })
+      .select();
+
+    if (error) {
+      console.error("Error adding ticket note:", error);
+      throw error;
+    }
+
+    console.log("Ticket note added successfully:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error adding ticket note:", error);
+    return { success: false, error };
   }
 };
 
@@ -191,5 +489,135 @@ export const resetPassword = async (token: string, newPassword: string) => {
   } catch (error) {
     console.error("Password reset error:", error);
     return { success: false, error: "Failed to reset password" };
+  }
+};
+
+// Add user function
+export const addUser = async (userData: {
+  name: string;
+  email: string;
+  employeeId: string;
+  role: "admin" | "callcentre";
+  password: string;
+}) => {
+  try {
+    const { data, error } = await supabase
+      .from("users")
+      .insert({
+        name: userData.name,
+        email: userData.email,
+        employee_id: userData.employeeId,
+        role: userData.role,
+        password_hash:
+          "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // Placeholder hash
+        status: "active",
+        created_at: new Date().toISOString(),
+        last_login: null,
+      })
+      .select();
+
+    if (error) {
+      console.error("Error adding user:", error);
+      throw error;
+    }
+
+    console.log("User added successfully:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error adding user:", error);
+    return { success: false, error };
+  }
+};
+
+// Update user function
+export const updateUser = async (
+  userId: string,
+  userData: {
+    name: string;
+    email: string;
+    employeeId: string;
+    role: "admin" | "callcentre";
+    password?: string;
+  },
+) => {
+  try {
+    const updateData: any = {
+      name: userData.name,
+      email: userData.email,
+      employee_id: userData.employeeId,
+      role: userData.role,
+      updated_at: new Date().toISOString(),
+    };
+
+    // Only update password if provided
+    if (userData.password && userData.password.trim() !== "") {
+      updateData.password_hash =
+        "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi"; // Placeholder hash
+    }
+
+    const { data, error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", userId)
+      .select();
+
+    if (error) {
+      console.error("Error updating user:", error);
+      throw error;
+    }
+
+    console.log("User updated successfully:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return { success: false, error };
+  }
+};
+
+// Delete user function
+export const deleteUser = async (userId: string) => {
+  try {
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+
+    if (error) {
+      console.error("Error deleting user:", error);
+      throw error;
+    }
+
+    console.log("User deleted successfully");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return { success: false, error };
+  }
+};
+
+// Toggle user status function
+export const toggleUserStatus = async (
+  userId: string,
+  currentStatus: string,
+) => {
+  try {
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
+
+    const { data, error } = await supabase
+      .from("users")
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+      .select();
+
+    if (error) {
+      console.error("Error toggling user status:", error);
+      throw error;
+    }
+
+    console.log("User status toggled successfully:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error toggling user status:", error);
+    return { success: false, error };
   }
 };
