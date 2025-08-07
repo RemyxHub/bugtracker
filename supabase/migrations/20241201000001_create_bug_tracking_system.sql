@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS public.tickets (
   customer_email TEXT NOT NULL,
   customer_phone TEXT,
   assigned_to UUID REFERENCES public.users(id),
+  image_urls TEXT[],
+  video_urls TEXT[],
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   resolved_at TIMESTAMP WITH TIME ZONE
@@ -62,7 +64,8 @@ INSERT INTO public.users (email, password_hash, name, employee_id, role, status)
 ('remy@ryotek.my', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Remy Admin', 'ADM001', 'admin', 'active'),
 ('admin@company.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin User', 'ADM002', 'admin', 'active'),
 ('john.smith@company.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Smith', 'CC001', 'callcentre', 'active'),
-('sarah.johnson@company.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Sarah Johnson', 'CC002', 'callcentre', 'active');
+('sarah.johnson@company.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Sarah Johnson', 'CC002', 'callcentre', 'active')
+ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO public.analytics_data (metric_name, metric_value, metric_change, metric_increased, metric_label) VALUES 
 ('orders', 201, 8.2, true, 'since last month'),

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import Swal from "sweetalert2";
 import {
   Card,
   CardContent,
@@ -172,11 +173,28 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
           setEditingUser(null);
         } else {
           console.error("Failed to update user:", result.error);
-          alert("Failed to update user. Please try again.");
+          Swal.fire({
+            title: "Error!",
+            text: "Failed to update user. Please try again.",
+            icon: "error",
+            timer: 1500,
+            showConfirmButton: false,
+          });
           return;
         }
       } else {
         // Add new user
+        const newUser: User = {
+          id: "", // Will be set by database
+          name: data.name,
+          email: data.email,
+          employeeId: data.employeeId,
+          role: data.role,
+          status: "active",
+          createdAt: new Date().toISOString(),
+          lastLogin: "Never",
+        };
+
         const result = await addUser({
           name: data.name,
           email: data.email,
@@ -189,7 +207,13 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
           await loadUsers(); // Reload users from database
         } else {
           console.error("Failed to add user:", result.error);
-          alert("Failed to add user. Please try again.");
+          Swal.fire({
+            title: "Error!",
+            text: "Failed to add user. Please try again.",
+            icon: "error",
+            timer: 1500,
+            showConfirmButton: false,
+          });
           return;
         }
       }
@@ -198,7 +222,13 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
       setIsAddDialogOpen(false);
     } catch (error) {
       console.error("Error submitting user form:", error);
-      alert("An error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -222,18 +252,47 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
   }, [editingUser, form]);
 
   const handleDelete = async (userId: string) => {
-    if (confirm("Are you sure you want to delete this user?")) {
+    const result = await Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, delete it!",
+    });
+
+    if (result.isConfirmed) {
       try {
-        const result = await deleteUser(userId);
-        if (result.success) {
+        const deleteResult = await deleteUser(userId);
+        if (deleteResult.success) {
           await loadUsers(); // Reload users from database
+          Swal.fire({
+            title: "Deleted!",
+            text: "User has been deleted.",
+            icon: "success",
+            timer: 1500,
+            showConfirmButton: false,
+          });
         } else {
-          console.error("Failed to delete user:", result.error);
-          alert("Failed to delete user. Please try again.");
+          console.error("Failed to delete user:", deleteResult.error);
+          Swal.fire({
+            title: "Error!",
+            text: "Failed to delete user. Please try again.",
+            icon: "error",
+            timer: 1500,
+            showConfirmButton: false,
+          });
         }
       } catch (error) {
         console.error("Error deleting user:", error);
-        alert("An error occurred. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "An error occurred. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
       }
     }
   };
@@ -248,11 +307,23 @@ const UserManagement = ({ theme = "light" }: UserManagementProps) => {
         await loadUsers(); // Reload users from database
       } else {
         console.error("Failed to toggle user status:", result.error);
-        alert("Failed to update user status. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to update user status. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
       }
     } catch (error) {
       console.error("Error toggling user status:", error);
-      alert("An error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 

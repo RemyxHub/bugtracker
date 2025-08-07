@@ -27,6 +27,37 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// File upload function
+export const uploadFile = async (
+  file: File,
+  bucket: string = "ticket-attachments",
+) => {
+  try {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .upload(filePath, file);
+
+    if (error) {
+      console.error("Error uploading file:", error);
+      throw error;
+    }
+
+    // Get public URL
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(filePath);
+
+    return { success: true, url: publicUrl, path: filePath };
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return { success: false, error };
+  }
+};
+
 // Real-time subscription for dashboard updates
 export const subscribeToTicketChanges = (callback: () => void) => {
   const subscription = supabase

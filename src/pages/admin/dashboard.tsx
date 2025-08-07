@@ -180,7 +180,7 @@ const Dashboard = () => {
 
           <div>
             {activeTab === "dashboard" && <AnalyticsDashboard theme={theme} />}
-            {activeTab === "tickets" && <TicketManagement theme={theme} />}
+            {activeTab === "tickets" && <TicketManagement />}
             {activeTab === "users" && userRole === "admin" && (
               <UserManagement theme={theme} />
             )}

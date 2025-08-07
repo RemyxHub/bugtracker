@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import Swal from "sweetalert2";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -66,6 +67,13 @@ const CallCentreLoginPage = () => {
 
       const email = emailMap[data.employeeId];
       if (!email) {
+        Swal.fire({
+          title: "Error!",
+          text: "Invalid employee ID or password. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         setError("Invalid employee ID or password. Please try again.");
         return;
       }

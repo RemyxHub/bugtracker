@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import Swal from "sweetalert2";
 
 // Supabase Environment Variables Required:
 // VITE_SUPABASE_URL=https://your-project-id.supabase.co
@@ -49,6 +50,10 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  Image,
+  Video,
+  Download,
+  Eye,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -69,6 +74,8 @@ interface Ticket {
   status: string;
   severity: string;
   assigned_to: string | null;
+  image_urls: string[] | null;
+  video_urls: string[] | null;
 }
 
 interface TicketNote {
@@ -100,6 +107,8 @@ const ViewTickets = () => {
   const [selectedStatus, setSelectedStatus] = useState("");
   const [noteText, setNoteText] = useState("");
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
 
   // Fetch tickets from database
   const fetchTickets = async () => {
@@ -245,16 +254,34 @@ const ViewTickets = () => {
 
       if (error) {
         console.error("Error assigning ticket:", error);
-        alert("Failed to assign ticket. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to assign ticket. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
-      alert("Ticket assigned successfully!");
+      Swal.fire({
+        title: "Success!",
+        text: "Ticket assigned successfully!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await fetchTickets();
       setSelectedStaff("");
     } catch (err) {
       console.error("Unexpected error assigning ticket:", err);
-      alert("An unexpected error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -279,18 +306,34 @@ const ViewTickets = () => {
 
       if (error) {
         console.error("Error updating ticket status:", error);
-        alert("Failed to update ticket status. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to update ticket status. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
-      alert(
-        `Ticket status updated to ${selectedStatus.replace("_", " ")} successfully!`,
-      );
+      Swal.fire({
+        title: "Success!",
+        text: `Ticket status updated to ${selectedStatus.replace("_", " ")} successfully!`,
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await fetchTickets();
       setSelectedStatus("");
     } catch (err) {
       console.error("Unexpected error updating ticket status:", err);
-      alert("An unexpected error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -309,7 +352,13 @@ const ViewTickets = () => {
 
       if (adminError || !adminUser) {
         console.error("Error finding admin user:", adminError);
-        alert("Failed to find admin user. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to find admin user. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
@@ -325,7 +374,13 @@ const ViewTickets = () => {
 
       if (noteError) {
         console.error("Error adding note:", noteError);
-        alert("Failed to add note. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to add note. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
@@ -335,13 +390,25 @@ const ViewTickets = () => {
         .update({ updated_at: new Date().toISOString() })
         .eq("id", selectedTicket.id);
 
-      alert("Note added successfully!");
+      Swal.fire({
+        title: "Success!",
+        text: "Note added successfully!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
       await fetchTickets();
       await fetchTicketNotes(selectedTicket.id);
       setNoteText("");
     } catch (err) {
       console.error("Unexpected error adding note:", err);
-      alert("An unexpected error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -610,6 +677,117 @@ const ViewTickets = () => {
 
                           <Separator />
 
+                          {/* Attachments Section */}
+                          {(selectedTicket.image_urls &&
+                            selectedTicket.image_urls.length > 0) ||
+                          (selectedTicket.video_urls &&
+                            selectedTicket.video_urls.length > 0) ? (
+                            <div className="space-y-4">
+                              <Label className="font-semibold">
+                                Attachments
+                              </Label>
+
+                              {/* Images */}
+                              {selectedTicket.image_urls &&
+                                selectedTicket.image_urls.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                      <Image className="h-4 w-4" />
+                                      <span className="text-sm font-medium">
+                                        Images (
+                                        {selectedTicket.image_urls.length})
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                      {selectedTicket.image_urls.map(
+                                        (imageUrl, index) => (
+                                          <div
+                                            key={index}
+                                            className="relative group"
+                                          >
+                                            <img
+                                              src={imageUrl}
+                                              alt={`Attachment ${index + 1}`}
+                                              className="w-full h-24 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+                                              onClick={() =>
+                                                setSelectedImage(imageUrl)
+                                              }
+                                            />
+                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-md flex items-center justify-center">
+                                              <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            </div>
+                                          </div>
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                              {/* Videos */}
+                              {selectedTicket.video_urls &&
+                                selectedTicket.video_urls.length > 0 && (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                      <Video className="h-4 w-4" />
+                                      <span className="text-sm font-medium">
+                                        Videos (
+                                        {selectedTicket.video_urls.length})
+                                      </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                      {selectedTicket.video_urls.map(
+                                        (videoUrl, index) => (
+                                          <div
+                                            key={index}
+                                            className="flex items-center justify-between bg-muted p-3 rounded-md"
+                                          >
+                                            <div className="flex items-center space-x-2">
+                                              <Video className="h-4 w-4 text-muted-foreground" />
+                                              <span className="text-sm">
+                                                Video {index + 1}
+                                              </span>
+                                            </div>
+                                            <div className="flex items-center space-x-2">
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  setSelectedVideo(videoUrl)
+                                                }
+                                              >
+                                                <Eye className="h-4 w-4 mr-1" />
+                                                View
+                                              </Button>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                  window.open(
+                                                    videoUrl,
+                                                    "_blank",
+                                                  )
+                                                }
+                                              >
+                                                <Download className="h-4 w-4 mr-1" />
+                                                Download
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                            </div>
+                          ) : null}
+
+                          {(selectedTicket.image_urls &&
+                            selectedTicket.image_urls.length > 0) ||
+                          (selectedTicket.video_urls &&
+                            selectedTicket.video_urls.length > 0) ? (
+                            <Separator />
+                          ) : null}
+
                           {/* Notes Section */}
                           <div className="space-y-4">
                             <Label className="font-semibold">
@@ -827,6 +1005,69 @@ const ViewTickets = () => {
             </p>
           </CardContent>
         </Card>
+      )}
+
+      {/* Image Modal */}
+      {selectedImage && (
+        <Dialog
+          open={!!selectedImage}
+          onOpenChange={() => setSelectedImage(null)}
+        >
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle>Image Attachment</DialogTitle>
+            </DialogHeader>
+            <div className="p-6 pt-0">
+              <img
+                src={selectedImage}
+                alt="Full size attachment"
+                className="w-full h-auto max-h-[70vh] object-contain rounded-md"
+              />
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(selectedImage, "_blank")}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Video Modal */}
+      {selectedVideo && (
+        <Dialog
+          open={!!selectedVideo}
+          onOpenChange={() => setSelectedVideo(null)}
+        >
+          <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+            <DialogHeader className="p-6 pb-0">
+              <DialogTitle>Video Attachment</DialogTitle>
+            </DialogHeader>
+            <div className="p-6 pt-0">
+              <video
+                src={selectedVideo}
+                controls
+                className="w-full h-auto max-h-[70vh] rounded-md"
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(selectedVideo, "_blank")}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { useRoutes, Routes, Route } from "react-router-dom";
+import LandingPage from "./components/LandingPage";
 import Home from "./components/home";
 import TicketTracker from "./components/TicketTracker";
 import AdminLoginPage from "./components/auth/AdminLoginPage";
@@ -15,7 +16,8 @@ function App() {
     <Suspense fallback={<p>Loading...</p>}>
       <>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/bug-submission" element={<Home />} />
           <Route path="/track-ticket" element={<TicketTracker />} />
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/callcentre/login" element={<CallCentreLoginPage />} />

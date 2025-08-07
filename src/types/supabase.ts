@@ -123,6 +123,7 @@ export type Database = {
           customer_phone: string | null
           description: string
           id: string
+          image_urls: string[] | null
           resolved_at: string | null
           severity: string
           status: string
@@ -130,6 +131,7 @@ export type Database = {
           ticket_number: string
           title: string
           updated_at: string | null
+          video_urls: string[] | null
         }
         Insert: {
           application_name: string
@@ -140,6 +142,7 @@ export type Database = {
           customer_phone?: string | null
           description: string
           id?: string
+          image_urls?: string[] | null
           resolved_at?: string | null
           severity: string
           status?: string
@@ -147,6 +150,7 @@ export type Database = {
           ticket_number: string
           title: string
           updated_at?: string | null
+          video_urls?: string[] | null
         }
         Update: {
           application_name?: string
@@ -157,6 +161,7 @@ export type Database = {
           customer_phone?: string | null
           description?: string
           id?: string
+          image_urls?: string[] | null
           resolved_at?: string | null
           severity?: string
           status?: string
@@ -164,6 +169,7 @@ export type Database = {
           ticket_number?: string
           title?: string
           updated_at?: string | null
+          video_urls?: string[] | null
         }
         Relationships: [
           {

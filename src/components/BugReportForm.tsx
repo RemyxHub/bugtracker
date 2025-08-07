@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import Swal from "sweetalert2";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { format } from "date-fns";
-import { supabase } from "@/lib/supabase";
+import { supabase, uploadFile } from "@/lib/supabase";
 
 // Supabase Environment Variables Required:
 // VITE_SUPABASE_URL=https://your-project-id.supabase.co
@@ -37,7 +38,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Upload, X, Image, Video } from "lucide-react";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters" }),
@@ -61,6 +62,9 @@ type FormValues = z.infer<typeof formSchema>;
 const BugReportForm = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [ticketNumber, setTicketNumber] = useState("");
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [selectedVideos, setSelectedVideos] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,11 +89,37 @@ const BugReportForm = () => {
 
   const onSubmit = async (data: FormValues) => {
     try {
+      setIsUploading(true);
+
       // Generate ticket number
       const newTicketNumber = generateTicketNumber();
 
+      // Upload files if any
+      const imageUrls: string[] = [];
+      const videoUrls: string[] = [];
+
+      // Upload images
+      for (const image of selectedImages) {
+        const result = await uploadFile(image, "ticket-attachments");
+        if (result.success && result.url) {
+          imageUrls.push(result.url);
+        } else {
+          console.error("Failed to upload image:", result.error);
+        }
+      }
+
+      // Upload videos
+      for (const video of selectedVideos) {
+        const result = await uploadFile(video, "ticket-attachments");
+        if (result.success && result.url) {
+          videoUrls.push(result.url);
+        } else {
+          console.error("Failed to upload video:", result.error);
+        }
+      }
+
       // Insert ticket into database
-      const { error } = await supabase.from("tickets").insert({
+      const ticketData = {
         ticket_number: newTicketNumber,
         title: data.title,
         application_name: data.applicationName,
@@ -100,11 +130,21 @@ const BugReportForm = () => {
         customer_email: data.email,
         customer_phone: data.phone || null,
         status: "open",
-      });
+        image_urls: imageUrls.length > 0 ? imageUrls : null,
+        video_urls: videoUrls.length > 0 ? videoUrls : null,
+      };
+
+      const { error } = await supabase.from("tickets").insert(ticketData);
 
       if (error) {
         console.error("Error submitting ticket:", error);
-        // You might want to show an error message to the user here
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to submit bug report. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
@@ -112,7 +152,15 @@ const BugReportForm = () => {
       setIsSubmitted(true);
     } catch (err) {
       console.error("Unexpected error:", err);
-      // You might want to show an error message to the user here
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -120,6 +168,84 @@ const BugReportForm = () => {
     form.reset();
     setIsSubmitted(false);
     setTicketNumber("");
+    setSelectedImages([]);
+    setSelectedVideos([]);
+  };
+
+  const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const validImages = files.filter((file) => {
+      const isImage = file.type.startsWith("image/");
+      const isValidSize = file.size <= 4 * 1024 * 1024; // 4MB
+
+      if (!isImage) {
+        Swal.fire({
+          title: "Invalid File!",
+          text: `${file.name} is not a valid image file.`,
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return false;
+      }
+
+      if (!isValidSize) {
+        Swal.fire({
+          title: "File Too Large!",
+          text: `${file.name} exceeds the 4MB limit for images.`,
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return false;
+      }
+
+      return true;
+    });
+
+    setSelectedImages((prev) => [...prev, ...validImages]);
+  };
+
+  const handleVideoSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const validVideos = files.filter((file) => {
+      const isVideo = file.type.startsWith("video/");
+      const isValidSize = file.size <= 25 * 1024 * 1024; // 25MB
+
+      if (!isVideo) {
+        Swal.fire({
+          title: "Invalid File!",
+          text: `${file.name} is not a valid video file.`,
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return false;
+      }
+
+      if (!isValidSize) {
+        Swal.fire({
+          title: "File Too Large!",
+          text: `${file.name} exceeds the 25MB limit for videos.`,
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return false;
+      }
+
+      return true;
+    });
+
+    setSelectedVideos((prev) => [...prev, ...validVideos]);
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeVideo = (index: number) => {
+    setSelectedVideos((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -291,6 +417,145 @@ const BugReportForm = () => {
                   )}
                 />
 
+                {/* File Upload Section */}
+                <div className="border-t pt-6">
+                  <h3 className="text-lg font-medium mb-4">
+                    Attachments (Optional)
+                  </h3>
+
+                  {/* Image Upload */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-2">
+                      Images (Max 4MB each)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
+                      <input
+                        id="image-upload"
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                      />
+                      <label
+                        htmlFor="image-upload"
+                        className="cursor-pointer block w-full h-full"
+                      >
+                        <div className="text-center">
+                          <Image className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium text-primary hover:text-primary/80">
+                              Upload images
+                            </span>
+                            <span className="pl-1">or drag and drop</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            PNG, JPG, GIF up to 4MB each
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Selected Images */}
+                    {selectedImages.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">
+                          Selected Images:
+                        </p>
+                        <div className="space-y-2">
+                          {selectedImages.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                            >
+                              <div className="flex items-center">
+                                <Image className="h-4 w-4 text-gray-500 mr-2" />
+                                <span className="text-sm">{file.name}</span>
+                                <span className="text-xs text-gray-500 ml-2">
+                                  ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Video Upload */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium mb-2">
+                      Videos (Max 25MB each)
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors">
+                      <input
+                        id="video-upload"
+                        type="file"
+                        className="hidden"
+                        multiple
+                        accept="video/*"
+                        onChange={handleVideoSelect}
+                      />
+                      <label
+                        htmlFor="video-upload"
+                        className="cursor-pointer block w-full h-full"
+                      >
+                        <div className="text-center">
+                          <Video className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                          <div className="text-sm text-gray-600">
+                            <span className="font-medium text-primary hover:text-primary/80">
+                              Upload videos
+                            </span>
+                            <span className="pl-1">or drag and drop</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            MP4, MOV, AVI up to 25MB each
+                          </p>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Selected Videos */}
+                    {selectedVideos.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">
+                          Selected Videos:
+                        </p>
+                        <div className="space-y-2">
+                          {selectedVideos.map((file, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between bg-gray-50 p-2 rounded"
+                            >
+                              <div className="flex items-center">
+                                <Video className="h-4 w-4 text-gray-500 mr-2" />
+                                <span className="text-sm">{file.name}</span>
+                                <span className="text-xs text-gray-500 ml-2">
+                                  ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeVideo(index)}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="border-t pt-6">
                   <h3 className="text-lg font-medium mb-4">
                     Contact Information
@@ -346,7 +611,16 @@ const BugReportForm = () => {
                 </div>
 
                 <div className="flex justify-end">
-                  <Button type="submit">Submit Bug Report</Button>
+                  <Button type="submit" disabled={isUploading}>
+                    {isUploading ? (
+                      <>
+                        <Upload className="mr-2 h-4 w-4 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      "Submit Bug Report"
+                    )}
+                  </Button>
                 </div>
               </form>
             </Form>

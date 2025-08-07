@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import Swal from "sweetalert2";
 
 // Supabase Environment Variables Required:
 // VITE_SUPABASE_URL=https://your-project-id.supabase.co
@@ -156,7 +157,13 @@ const TicketManagement = () => {
 
       if (userError || !userData) {
         console.error("Error finding user:", userError);
-        alert("Failed to find the selected staff member. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to find the selected staff member. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
@@ -172,19 +179,37 @@ const TicketManagement = () => {
 
       if (error) {
         console.error("Error assigning ticket:", error);
-        alert("Failed to assign ticket. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to assign ticket. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
       console.log("Ticket assigned successfully:", data);
-      alert("Ticket assigned successfully!");
+      Swal.fire({
+        title: "Success!",
+        text: "Ticket assigned successfully!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
       // Refresh tickets
       await fetchTickets();
       setSelectedStaff("");
     } catch (err) {
       console.error("Unexpected error assigning ticket:", err);
-      alert("An unexpected error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -209,21 +234,37 @@ const TicketManagement = () => {
 
       if (error) {
         console.error("Error updating ticket status:", error);
-        alert("Failed to update ticket status. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to update ticket status. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
       console.log("Ticket status updated successfully:", data);
-      alert(
-        `Ticket status updated to ${selectedStatus.replace("_", " ")} successfully!`,
-      );
+      Swal.fire({
+        title: "Success!",
+        text: `Ticket status updated to ${selectedStatus.replace("_", " ")} successfully!`,
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
       // Refresh tickets
       await fetchTickets();
       setSelectedStatus("");
     } catch (err) {
       console.error("Unexpected error updating ticket status:", err);
-      alert("An unexpected error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
@@ -275,7 +316,13 @@ const TicketManagement = () => {
 
       if (adminError || !adminUser) {
         console.error("Error finding admin user:", adminError);
-        alert("Failed to find admin user. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to find admin user. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
@@ -291,7 +338,13 @@ const TicketManagement = () => {
 
       if (noteError) {
         console.error("Error adding note:", noteError);
-        alert("Failed to add note. Please try again.");
+        Swal.fire({
+          title: "Error!",
+          text: "Failed to add note. Please try again.",
+          icon: "error",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         return;
       }
 
@@ -310,14 +363,26 @@ const TicketManagement = () => {
         console.log("Ticket timestamp updated:", ticketData);
       }
 
-      alert("Note added successfully!");
+      Swal.fire({
+        title: "Success!",
+        text: "Note added successfully!",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
 
       // Refresh tickets
       await fetchTickets();
       setNoteText("");
     } catch (err) {
       console.error("Unexpected error adding note:", err);
-      alert("An unexpected error occurred. Please try again.");
+      Swal.fire({
+        title: "Error!",
+        text: "An unexpected error occurred. Please try again.",
+        icon: "error",
+        timer: 1500,
+        showConfirmButton: false,
+      });
     }
   };
 
