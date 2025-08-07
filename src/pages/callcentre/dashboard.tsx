@@ -563,6 +563,64 @@ const CallCentreDashboard = () => {
                                         </p>
                                       </div>
                                     </div>
+
+                                    {/* Attachments Section */}
+                                    {((selectedTicket?.image_urls && selectedTicket.image_urls.length > 0) ||
+                                      (selectedTicket?.video_urls && selectedTicket.video_urls.length > 0)) && (
+                                      <>
+                                        <div className="border-t pt-4">
+                                          <p className="text-sm font-medium mb-3">Attachments</p>
+                                          
+                                          {/* Images */}
+                                          {selectedTicket.image_urls && selectedTicket.image_urls.length > 0 && (
+                                            <div className="mb-4">
+                                              <div className="flex items-center space-x-2 mb-2">
+                                                <span className="text-sm font-medium">Images ({selectedTicket.image_urls.length})</span>
+                                              </div>
+                                              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                                {selectedTicket.image_urls.map((imageUrl, index) => (
+                                                  <div key={index} className="relative group">
+                                                    <img
+                                                      src={imageUrl}
+                                                      alt={`Attachment ${index + 1}`}
+                                                      className="w-full h-24 object-cover rounded-md border cursor-pointer hover:opacity-80 transition-opacity"
+                                                      onClick={() => window.open(imageUrl, '_blank')}
+                                                    />
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          {/* Videos */}
+                                          {selectedTicket.video_urls && selectedTicket.video_urls.length > 0 && (
+                                            <div>
+                                              <div className="flex items-center space-x-2 mb-2">
+                                                <span className="text-sm font-medium">Videos ({selectedTicket.video_urls.length})</span>
+                                              </div>
+                                              <div className="space-y-2">
+                                                {selectedTicket.video_urls.map((videoUrl, index) => (
+                                                  <div key={index} className="flex items-center justify-between bg-muted p-3 rounded-md">
+                                                    <div className="flex items-center space-x-2">
+                                                      <span className="text-sm">Video {index + 1}</span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                      <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => window.open(videoUrl, '_blank')}
+                                                      >
+                                                        View
+                                                      </Button>
+                                                    </div>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
+                                    )}
                                   </DialogContent>
                                 </Dialog>
 
