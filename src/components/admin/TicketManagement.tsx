@@ -88,6 +88,11 @@ const TicketManagement = () => {
   const [noteText, setNoteText] = useState("");
   const [ticketNotes, setTicketNotes] = useState<any[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [dialogStates, setDialogStates] = useState({
+    status: false,
+    assign: false,
+    note: false,
+  });
 
   // Fetch tickets from database
   const fetchTickets = async () => {
@@ -201,6 +206,7 @@ const TicketManagement = () => {
       // Refresh tickets
       await fetchTickets();
       setSelectedStaff("");
+      setDialogStates(prev => ({ ...prev, assign: false }));
     } catch (err) {
       console.error("Unexpected error assigning ticket:", err);
       Swal.fire({
@@ -256,6 +262,7 @@ const TicketManagement = () => {
       // Refresh tickets
       await fetchTickets();
       setSelectedStatus("");
+      setDialogStates(prev => ({ ...prev, status: false }));
     } catch (err) {
       console.error("Unexpected error updating ticket status:", err);
       Swal.fire({
@@ -374,6 +381,7 @@ const TicketManagement = () => {
       // Refresh tickets
       await fetchTickets();
       setNoteText("");
+      setDialogStates(prev => ({ ...prev, note: false }));
     } catch (err) {
       console.error("Unexpected error adding note:", err);
       Swal.fire({
@@ -676,12 +684,18 @@ const TicketManagement = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedTicket(ticket)}
+                            onClick={() => {
+                              setSelectedTicket(ticket);
+                              setDialogStates(prev => ({ ...prev, assign: true }));
+                            }}
                           >
                             Assign
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent 
+                          open={dialogStates.assign} 
+                          onOpenChange={(open) => setDialogStates(prev => ({ ...prev, assign: open }))}
+                        >
                           <DialogHeader>
                             <DialogTitle>Assign Ticket</DialogTitle>
                             <DialogDescription>
@@ -735,12 +749,18 @@ const TicketManagement = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedTicket(ticket)}
+                            onClick={() => {
+                              setSelectedTicket(ticket);
+                              setDialogStates(prev => ({ ...prev, note: true }));
+                            }}
                           >
                             Add Note
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent 
+                          open={dialogStates.note} 
+                          onOpenChange={(open) => setDialogStates(prev => ({ ...prev, note: open }))}
+                        >
                           <DialogHeader>
                             <DialogTitle>Add Note to Ticket</DialogTitle>
                             <DialogDescription>
