@@ -565,14 +565,13 @@ const CallCentreDashboard = () => {
                                     </div>
 
                                     {/* Attachments Section */}
-                                    {((selectedTicket?.image_urls && selectedTicket.image_urls.length > 0) ||
-                                      (selectedTicket?.video_urls && selectedTicket.video_urls.length > 0)) && (
+                                    {(selectedTicket?.image_urls?.length > 0 || selectedTicket?.video_urls?.length > 0) && (
                                       <>
                                         <div className="border-t pt-4">
                                           <p className="text-sm font-medium mb-3">Attachments</p>
                                           
                                           {/* Images */}
-                                          {selectedTicket.image_urls && selectedTicket.image_urls.length > 0 && (
+                                          {selectedTicket?.image_urls && selectedTicket.image_urls.length > 0 && (
                                             <div className="mb-4">
                                               <div className="flex items-center space-x-2 mb-2">
                                                 <span className="text-sm font-medium">Images ({selectedTicket.image_urls.length})</span>
@@ -593,7 +592,7 @@ const CallCentreDashboard = () => {
                                           )}
 
                                           {/* Videos */}
-                                          {selectedTicket.video_urls && selectedTicket.video_urls.length > 0 && (
+                                          {selectedTicket?.video_urls && selectedTicket.video_urls.length > 0 && (
                                             <div>
                                               <div className="flex items-center space-x-2 mb-2">
                                                 <span className="text-sm font-medium">Videos ({selectedTicket.video_urls.length})</span>
