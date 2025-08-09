@@ -75,7 +75,8 @@ interface Ticket {
 interface Staff {
   id: string;
   name: string;
-  avatar: string;
+  email: string;
+  role: string;
 }
 
 const TicketManagement = () => {
@@ -88,6 +89,7 @@ const TicketManagement = () => {
   const [noteText, setNoteText] = useState("");
   const [ticketNotes, setTicketNotes] = useState<any[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(false);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [dialogStates, setDialogStates] = useState({
     status: false,
     assign: false,
@@ -120,16 +122,32 @@ const TicketManagement = () => {
     }
   };
 
+  // Fetch staff members from database
+  const fetchStaff = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name, email, role")
+        .eq("status", "active")
+        .in("role", ["admin", "callcentre"])
+        .order("name");
+
+      if (error) {
+        console.error("Error fetching staff:", error);
+        return;
+      }
+
+      setStaff(data || []);
+    } catch (err) {
+      console.error("Unexpected error fetching staff:", err);
+    }
+  };
+
   useEffect(() => {
     fetchTickets();
+    fetchStaff();
+    fetchStaff();
   }, []);
-
-  const staff: Staff[] = [
-    { id: "1", name: "John Smith", avatar: "JS" },
-    { id: "2", name: "Sarah Johnson", avatar: "SJ" },
-    { id: "3", name: "Remy Admin", avatar: "RA" },
-    { id: "4", name: "Admin User", avatar: "AU" },
-  ];
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -153,29 +171,10 @@ const TicketManagement = () => {
     if (!selectedTicket || !selectedStaff) return;
 
     try {
-      // First, get the user UUID from the users table
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("id")
-        .eq("name", selectedStaff)
-        .single();
-
-      if (userError || !userData) {
-        console.error("Error finding user:", userError);
-        Swal.fire({
-          title: "Error!",
-          text: "Failed to find the selected staff member. Please try again.",
-          icon: "error",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        return;
-      }
-
       const { data, error } = await supabase
         .from("tickets")
         .update({
-          assigned_to: userData.id,
+          assigned_to: selectedStaff,
           status: "assigned",
           updated_at: new Date().toISOString(),
         })
@@ -716,15 +715,18 @@ const TicketManagement = () => {
                                   {staff.map((member) => (
                                     <SelectItem
                                       key={member.id}
-                                      value={member.name}
+                                      value={member.id}
                                     >
                                       <div className="flex items-center gap-2">
                                         <Avatar className="h-6 w-6">
                                           <AvatarFallback className="text-xs">
-                                            {member.avatar}
+                                            {member.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                                           </AvatarFallback>
                                         </Avatar>
-                                        <span>{member.name}</span>
+                                        <div>
+                                          <div className="font-medium">{member.name}</div>
+                                          <div className="text-xs text-muted-foreground">{member.role}</div>
+                                        </div>
                                       </div>
                                     </SelectItem>
                                   ))}
