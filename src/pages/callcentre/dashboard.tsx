@@ -686,9 +686,9 @@ const CallCentreDashboard = () => {
                                 </Dialog>
 
                                 <Dialog
-                                  open={dialogOpen.status}
+                                  open={dialogStates.status}
                                   onOpenChange={(open) =>
-                                    setDialogOpen((prev) => ({
+                                    setDialogStates((prev) => ({
                                       ...prev,
                                       status: open,
                                     }))
@@ -700,7 +700,7 @@ const CallCentreDashboard = () => {
                                       size="sm"
                                       onClick={() => {
                                         setSelectedTicket(ticket);
-                                        setDialogOpen((prev) => ({
+                                        setDialogStates((prev) => ({
                                           ...prev,
                                           status: true,
                                         }));

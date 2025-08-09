@@ -772,12 +772,18 @@ const TicketManagement = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedTicket(ticket)}
+                            onClick={() => {
+                              setSelectedTicket(ticket);
+                              setDialogStates(prev => ({ ...prev, status: true }));
+                            }}
                           >
                             Update Status
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent 
+                          open={dialogStates.status} 
+                          onOpenChange={(open) => setDialogStates(prev => ({ ...prev, status: open }))}
+                        >
                           <DialogHeader>
                             <DialogTitle>Update Ticket Status</DialogTitle>
                             <DialogDescription>

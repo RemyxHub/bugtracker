@@ -801,12 +801,18 @@ const ViewTickets = () => {
                                     Loading notes...
                                   </span>
                                 </div>
-                              ) : ticketNotes.length > 0 ? (
+                                <Dialog 
+                                  open={dialogStates.note} 
+                                  onOpenChange={(open) => setDialogStates(prev => ({ ...prev, note: open }))}
+                                >
                                 <div className="space-y-3">
                                   {ticketNotes.map((note) => (
                                     <div
                                       key={note.id}
-                                      className="border-l-2 border-muted pl-3 py-2"
+                                      onClick={() => {
+                                        setSelectedTicket(ticket);
+                                        setDialogStates(prev => ({ ...prev, note: true }));
+                                      }}
                                     >
                                       <div className="flex items-center justify-between mb-1">
                                         <span className="text-sm font-medium">
