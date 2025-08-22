@@ -321,7 +321,7 @@ const LandingPage = () => {
             </p>
             <Link to="/bug-submission">
               <Button className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white px-12 py-4 text-xl">
-                Try BugTracker now
+                Try BugTracker Pro now
                 <ArrowRight className="ml-3 h-6 w-6" />
               </Button>
             </Link>
