@@ -205,14 +205,6 @@ const AdminLoginPage = () => {
               </p>
             </div>
 
-            <div className="mt-4 p-3 bg-gray-50 rounded-md">
-              <p className="text-xs text-gray-600 mb-2">Demo Credentials:</p>
-              <p className="text-xs text-gray-700">
-                Admin: remy@ryotek.my / admin123
-                <br />
-                Admin: admin@company.com / admin123
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
