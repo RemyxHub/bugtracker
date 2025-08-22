@@ -513,7 +513,7 @@ const LandingPage = () => {
                   Get Started
                 </Button>
               </Link>
-              <Button variant="outline" className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 text-lg">
+              <Button variant="outline" className="border-white text-white hover:bg-white/10 hover:text-white px-8 py-3 text-lg">
                 Contact Us
               </Button>
             </div>
