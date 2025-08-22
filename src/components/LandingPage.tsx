@@ -237,7 +237,7 @@ const LandingPage = () => {
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-600 dark:text-gray-400">Processing Time</span>
-                    <span className="text-sm font-medium">< 2 seconds</span>
+                    <span className="text-sm font-medium">{'< 2 seconds'}</span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                     <div className="bg-blue-500 h-2 rounded-full" style={{ width: '85%' }}></div>
