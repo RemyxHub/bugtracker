@@ -59,10 +59,11 @@ const LandingPage = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link to="/features" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Features</Link>
-            <Link to="/pricing" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Pricing</Link>
-            <Link to="/about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">About</Link>
-            <Link to="/contact" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Contact</Link>
-            <Link to="/blog" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Blog</Link>
+            <a href="#features" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Features</a>
+            <a href="#pricing" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Pricing</a>
+            <a href="#about" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">About</a>
+            <a href="#contact" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Contact</a>
+            <a href="#blog" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Blog</a>
           </nav>
 
           <div className="flex items-center space-x-4">
@@ -96,11 +97,11 @@ const LandingPage = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
             <nav className="container mx-auto px-4 py-4 space-y-4">
-              <Link to="/features" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Features</Link>
-              <Link to="/pricing" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Pricing</Link>
-              <Link to="/about" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">About</Link>
-              <Link to="/contact" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Contact</Link>
-              <Link to="/blog" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Blog</Link>
+              <a href="#features" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Features</a>
+              <a href="#pricing" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Pricing</a>
+              <a href="#about" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">About</a>
+              <a href="#contact" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Contact</a>
+              <a href="#blog" className="block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Blog</a>
               <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200 dark:border-gray-800">
                 <Link to="/admin/login">
                   <Button variant="ghost" className="w-full">Sign In</Button>
@@ -211,7 +212,7 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 bg-white dark:bg-gray-900">
+      <section id="features" className="py-20 px-4 bg-white dark:bg-gray-900">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">
@@ -317,7 +318,7 @@ const LandingPage = () => {
       </section>
 
       {/* Integrations Section */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
+      <section id="pricing" className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">
@@ -361,7 +362,7 @@ const LandingPage = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 px-4 bg-white dark:bg-gray-900">
+      <section id="about" className="py-20 px-4 bg-white dark:bg-gray-900">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">
@@ -434,7 +435,7 @@ const LandingPage = () => {
       </section>
 
       {/* Blog Section */}
-      <section className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
+      <section id="blog" className="py-20 px-4 bg-gray-50 dark:bg-gray-800">
         <div className="container mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">Learn From The Blogs</h2>
@@ -498,7 +499,7 @@ const LandingPage = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700">
+      <section id="contact" className="py-20 px-4 bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-700 dark:to-purple-700">
         <div className="container mx-auto text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
@@ -549,33 +550,33 @@ const LandingPage = () => {
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><Link to="/features" className="hover:text-white transition-colors">Features</Link></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-                <li><Link to="/integrations" className="hover:text-white transition-colors">Integrations</Link></li>
-                <li><Link to="/api" className="hover:text-white transition-colors">API</Link></li>
-                <li><Link to="/security" className="hover:text-white transition-colors">Security</Link></li>
+                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
+                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
+                <li><a href="#integrations" className="hover:text-white transition-colors">Integrations</a></li>
+                <li><a href="#api" className="hover:text-white transition-colors">API</a></li>
+                <li><a href="#security" className="hover:text-white transition-colors">Security</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link to="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-                <li><Link to="/press" className="hover:text-white transition-colors">Press</Link></li>
-                <li><Link to="/partners" className="hover:text-white transition-colors">Partners</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact</Link></li>
+                <li><a href="#about" className="hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#careers" className="hover:text-white transition-colors">Careers</a></li>
+                <li><a href="#press" className="hover:text-white transition-colors">Press</a></li>
+                <li><a href="#partners" className="hover:text-white transition-colors">Partners</a></li>
+                <li><a href="#contact" className="hover:text-white transition-colors">Contact</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
+                <li><a href="#help" className="hover:text-white transition-colors">Help Center</a></li>
                 <li><Link to="/track-ticket" className="hover:text-white transition-colors">Track Ticket</Link></li>
-                <li><Link to="/status" className="hover:text-white transition-colors">System Status</Link></li>
-                <li><Link to="/community" className="hover:text-white transition-colors">Community</Link></li>
-                <li><Link to="/docs" className="hover:text-white transition-colors">Documentation</Link></li>
+                <li><a href="#status" className="hover:text-white transition-colors">System Status</a></li>
+                <li><a href="#community" className="hover:text-white transition-colors">Community</a></li>
+                <li><a href="#docs" className="hover:text-white transition-colors">Documentation</a></li>
               </ul>
             </div>
           </div>
@@ -589,12 +590,12 @@ const LandingPage = () => {
                 <Link to="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
                   Privacy Policy
                 </Link>
-                <Link to="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
+                <a href="#terms" className="text-gray-400 hover:text-white text-sm transition-colors">
                   Terms of Service
-                </Link>
-                <Link to="/cookies" className="text-gray-400 hover:text-white text-sm transition-colors">
+                </a>
+                <a href="#cookies" className="text-gray-400 hover:text-white text-sm transition-colors">
                   Cookie Policy
-                </Link>
+                </a>
               </div>
             </div>
           </div>
