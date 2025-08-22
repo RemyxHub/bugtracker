@@ -9,7 +9,6 @@ import ForgotPasswordPage from "./components/auth/ForgotPasswordPage";
 import AdminDashboard from "./pages/admin/dashboard";
 import CallCentreDashboard from "./pages/callcentre/dashboard";
 import ViewTickets from "./components/admin/ViewTickets";
-import routes from "tempo-routes";
 
 function App() {
   return (
@@ -36,7 +35,6 @@ function App() {
             element={<CallCentreDashboard />}
           />
         </Routes>
-        {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
       </>
     </Suspense>
   );
