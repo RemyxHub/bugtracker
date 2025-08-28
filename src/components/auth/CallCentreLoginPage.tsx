@@ -223,14 +223,7 @@ const CallCentreLoginPage = () => {
               </p>
             </div>
 
-            <div className="mt-4 p-3 bg-gray-50 rounded-md">
-              <p className="text-xs text-gray-600 mb-2">Demo Credentials:</p>
-              <p className="text-xs text-gray-700">
-                Employee ID: CC001
-                <br />
-                Password: staff123
-              </p>
-            </div>
+            
           </CardContent>
         </Card>
       </div>
