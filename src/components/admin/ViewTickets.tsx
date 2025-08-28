@@ -579,10 +579,7 @@ const ViewTickets = () => {
                         </DialogTitle>
                         <DialogDescription>
                           {selectedTicket?.ticket_number} -{" "}
-                          {selectedTicket?.title}asdsadasd
-                        </DialogDescription>
-                        <DialogDescription>
-                          asdsada
+                          {selectedTicket?.title}
                         </DialogDescription>
                       </DialogHeader>
 
@@ -670,7 +667,7 @@ const ViewTickets = () => {
 
                             <div>
                               <Label className="font-semibold">
-                                Steps to Reproduce
+                                Steps to Reprosasdsaduce
                               </Label>
                               <p className="mt-2 text-sm bg-muted p-3 rounded-md whitespace-pre-wrap">
                                 {selectedTicket.steps_to_reproduce}
