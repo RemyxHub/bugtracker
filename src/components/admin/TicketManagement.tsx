@@ -520,7 +520,7 @@ const TicketManagement = () => {
                               {selectedTicket?.title}
                             </DialogDescription>
                             <DialogDescription>
-                              Assigned to : {selectedStaff.id}
+                              Assigned to : {selectedStaff}
                             </DialogDescription>
                           </DialogHeader>
 
