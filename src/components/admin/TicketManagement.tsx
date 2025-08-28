@@ -519,9 +519,11 @@ const TicketManagement = () => {
                               {selectedTicket?.ticket_number} -{" "}
                               {selectedTicket?.title}
                             </DialogDescription>
-                            <DialogDescription>
-                              Assigned to : {(ticket.assigned_to as any)?.name || "Unknown"}
-                            </DialogDescription>
+                            {ticket.assigned_to && (
+                              <DialogDescription>
+                                Assigned to : {(ticket.assigned_to as any)?.name || "Unknown"}
+                              </DialogDescription>
+                            )}
                           </DialogHeader>
 
                           {selectedTicket && (
