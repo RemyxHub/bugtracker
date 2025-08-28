@@ -579,7 +579,7 @@ const ViewTickets = () => {
                         </DialogTitle>
                         <DialogDescription>
                           {selectedTicket?.ticket_number} -{" "}
-                          {selectedTicket?.title}
+                          {selectedTicket?.title}asdsadasd
                         </DialogDescription>
                         <DialogDescription>
                           asdsada
