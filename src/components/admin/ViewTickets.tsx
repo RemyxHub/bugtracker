@@ -530,7 +530,7 @@ const ViewTickets = () => {
                   {ticket.assigned_to && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Assigned to:
+                        Assigned to:aa
                       </span>
                       <span className="font-medium">
                         {(ticket.assigned_to as any)?.name || "Unknown"}
