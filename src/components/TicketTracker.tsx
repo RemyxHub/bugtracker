@@ -251,7 +251,7 @@ const TicketTracker = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     {getStatusIcon(ticket.status)}
-                    Ticket Details
+                    Ticket Detailssss
                   </CardTitle>
                   <Badge
                     className={getStatusColor(ticket.status)}
