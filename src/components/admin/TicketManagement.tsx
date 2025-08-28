@@ -435,7 +435,6 @@ const TicketManagement = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Severity</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
