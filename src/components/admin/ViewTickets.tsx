@@ -581,6 +581,9 @@ const ViewTickets = () => {
                           {selectedTicket?.ticket_number} -{" "}
                           {selectedTicket?.title}
                         </DialogDescription>
+                        <DialogDescription>
+                          asdsada
+                        </DialogDescription>
                       </DialogHeader>
 
                       {selectedTicket && (
