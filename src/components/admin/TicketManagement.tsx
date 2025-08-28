@@ -503,7 +503,7 @@ const TicketManagement = () => {
                         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
                           <DialogHeader>
                             <DialogTitle className="flex items-center space-x-2">
-                              <span>Ticket Detailssss</span>
+                              <span>Ticket Details</span>
                               <Badge
                                 className={getStatusColor(
                                   selectedTicket?.status || "",
@@ -518,6 +518,9 @@ const TicketManagement = () => {
                             <DialogDescription>
                               {selectedTicket?.ticket_number} -{" "}
                               {selectedTicket?.title}
+                            </DialogDescription>
+                            <DialogDescription>
+                              Assigned to : 
                             </DialogDescription>
                           </DialogHeader>
 
