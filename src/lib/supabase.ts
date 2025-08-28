@@ -577,7 +577,6 @@ export const updateUser = async (
       email: userData.email,
       employee_id: userData.employeeId,
       role: userData.role,
-      updated_at: new Date().toISOString(),
     };
 
     // Only update password if provided
@@ -635,7 +634,6 @@ export const toggleUserStatus = async (
       .from("users")
       .update({
         status: newStatus,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", userId)
       .select();
