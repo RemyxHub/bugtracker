@@ -435,6 +435,7 @@ const TicketManagement = () => {
                 <TableHead>Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Severity</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -849,9 +850,6 @@ const TicketManagement = () => {
                         </DialogContent>
                       </Dialog>
 
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
